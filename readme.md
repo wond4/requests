@@ -27,11 +27,30 @@ File 方法用于保存文件或流式接收，不会缓存响应内容（不限
     - 返回值分别为查找结果和是否找到
   > 包装了常用的 int int64 uint string float32 之类的方法 
 
-- 使用例子
+- 使用例子  
+获取 `https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=7` 并解析
 ```
-import "gitee.com/binshub/requests"
+package main
 
-requests.Get("http://www.baidu.com")
-requests.Get("http://www.baidu.com/s", requests.Params{"wd":"测试"})
+import (
+	"fmt"
+
+	"gitee.com/binshub/requests"
+)
+
+func main() {
+	fmt.Println("start")
+	resp, _ := requests.Get("https://cn.bing.com/HPImageArchive.aspx",
+		requests.Params{"format": "js", "idx": "0", "n": "7"})
+	if resp.Resp.StatusCode != 200 {
+		fmt.Printf("response code err. expect %v, get %v", 200, resp.Resp.StatusCode)
+	}
+	res, _ := resp.Object()
+	url, ok := requests.FindString(res, "images", 1, "url")
+	if !ok {
+		fmt.Println("data parse err.")
+	}
+	fmt.Println(url)
+}
 ```
 

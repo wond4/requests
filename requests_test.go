@@ -48,10 +48,12 @@ func TestClient_Request(t *testing.T) {
 			if gotResp.Resp.StatusCode != tt.wantRespCode {
 				t.Errorf("Get() gotRespCode = %v, want %v", gotResp, tt.wantRespCode)
 			}
-			res, _ := gotResp.Dict()
-			if _, ok := res["images"]; !ok {
-				t.Error("Get() need has key images")
+			res, _ := gotResp.Object()
+			url, ok := FindString(res, "images", 1, "url")
+			if !ok {
+				t.Errorf("data parse err.")
 			}
+			t.Log(url)
 		})
 	}
 }
