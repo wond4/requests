@@ -32,6 +32,6 @@ File 方法用于保存文件或流式接收，不会缓存响应内容（不限
 import "gitee.com/binshub/requests"
 
 requests.Get("http://www.baidu.com")
-requests.Get("http://www.baidu.com/s", Params{"wd":"测试"})
+requests.Get("http://www.baidu.com/s", requests.Params{"wd":"测试"})
 ```
 
