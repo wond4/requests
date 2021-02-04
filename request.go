@@ -66,15 +66,15 @@ func (r *SRequest) parseArgs(args ...interface{}) (err error) {
 			}
 		case FileBody:
 			r.Req.Body = ioutil.NopCloser(t)
+		case StringBody:
+			bBody = []byte(t)
+		case BytesBody:
+			bBody = t
 		case JsonBody:
 			bBody, err = json.Marshal(t)
 			if err != nil {
 				return
 			}
-		case StringBody:
-			bBody = []byte(t)
-		case BytesBody:
-			bBody = t
 		}
 	}
 	r.Req.URL.RawQuery = query.Encode()
