@@ -47,7 +47,7 @@ func (r *SRequest) parseArgs(args ...interface{}) (err error) {
 		switch t := arg.(type) {
 		case Headers:
 			for k, v := range t {
-				r.Req.Header.Set(k, v)
+				r.Req.Header.Add(k, v)
 			}
 		case Params:
 			for k, v := range t {
