@@ -164,3 +164,10 @@ func NewRequest(method, remoteUrl string, args ...interface{}) (req *SRequest, e
 	err = req.parseArgs(args...)
 	return
 }
+
+func Map2Cookies(cookieMap map[string]string) (cookies Cookies) {
+	for k, v := range cookieMap {
+		cookies = append(cookies, &http.Cookie{Name: k, Value: v})
+	}
+	return
+}
