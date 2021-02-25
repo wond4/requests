@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
+	"sync"
 )
 
 // NewClient 使用的选项可使用 | 来设置多个
@@ -15,7 +16,8 @@ const (
 )
 
 type SClient struct {
-	C *http.Client
+	C     *http.Client
+	cOnce sync.Once
 }
 
 func Session(option uint) *SClient {
@@ -31,7 +33,7 @@ func Session(option uint) *SClient {
 		tp := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 		c.Transport = tp
 	}
-	return &SClient{c}
+	return &SClient{C: c}
 }
 
 func (c *SClient) Request(method, remoteUrl string, args ...interface{}) (resp *SResponse, err error) {
@@ -41,7 +43,9 @@ func (c *SClient) Request(method, remoteUrl string, args ...interface{}) (resp *
 		return
 	}
 	if c.C == nil {
-		c.C = &http.Client{}
+		c.cOnce.Do(func() {
+			c.C = &http.Client{}
+		})
 	}
 	return c.Do(req)
 }
