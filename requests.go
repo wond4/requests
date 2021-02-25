@@ -43,6 +43,10 @@ func (c *SClient) Request(method, remoteUrl string, args ...interface{}) (resp *
 	if c.C == nil {
 		c.C = &http.Client{}
 	}
+	return c.Do(req)
+}
+
+func (c *SClient) Do(req *SRequest) (resp *SResponse, err error) {
 	rawResp, err := c.C.Do(req.Req)
 	if err != nil {
 		return
