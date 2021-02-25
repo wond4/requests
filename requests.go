@@ -18,6 +18,11 @@ const (
 type SClient struct {
 	C     *http.Client
 	cOnce sync.Once
+
+	middlewareReq  *reqMiddleware
+	mReqOnce       sync.Once
+	middlewareResp *respMiddleware
+	mRespOnce      sync.Once
 }
 
 func Session(option uint) *SClient {
@@ -51,12 +56,62 @@ func (c *SClient) Request(method, remoteUrl string, args ...interface{}) (resp *
 }
 
 func (c *SClient) Do(req *SRequest) (resp *SResponse, err error) {
+	if c.middlewareReq != nil {
+		for _, f := range c.middlewareReq.middleware {
+			f(req)
+		}
+	}
 	rawResp, err := c.C.Do(req.Req)
 	if err != nil {
 		return
 	}
 	resp = &SResponse{Resp: rawResp}
+	if c.middlewareResp != nil {
+		for _, f := range c.middlewareResp.middleware {
+			f(resp)
+		}
+	}
 	return
+}
+
+func (c *SClient) AddReqMiddleware(f func(req *SRequest)) (id int) {
+	if c.middlewareReq == nil {
+		c.mReqOnce.Do(func() {
+			c.middlewareReq = new(reqMiddleware)
+		})
+	}
+	return c.middlewareReq.Add(f)
+}
+
+func (c *SClient) RemoveReqMiddleware(id int) {
+	if c.middlewareReq != nil {
+		c.middlewareReq.Remove(id)
+	}
+}
+func (c *SClient) ClearReqMiddleware() {
+	if c.middlewareReq != nil {
+		c.middlewareReq.Clear()
+	}
+}
+
+func (c *SClient) AddRespMiddleware(f func(req *SResponse)) (id int) {
+	if c.middlewareResp == nil {
+		c.mRespOnce.Do(func() {
+			c.middlewareResp = new(respMiddleware)
+		})
+	}
+	return c.middlewareResp.Add(f)
+}
+
+func (c *SClient) RemoveRespMiddleware(id int) {
+	if c.middlewareResp != nil {
+		c.middlewareResp.Remove(id)
+	}
+}
+func (c *SClient) ClearRespMiddleware() {
+	if c.middlewareResp != nil {
+		c.middlewareResp.Clear()
+	}
 }
 
 func (c *SClient) Get(remoteUrl string, args ...interface{}) (resp *SResponse, err error) {
