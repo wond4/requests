@@ -14,7 +14,7 @@ import (
 
 type Headers map[string]string
 type Params map[string]string // url query
-type Cookies []*http.Cookie   // bytes body
+type Cookies []*http.Cookie
 
 // body types
 // only one body can be effective
