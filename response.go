@@ -1,11 +1,16 @@
 package requests
 
 import (
+	"bytes"
 	"encoding/json"
+	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
 type SResponse struct {
@@ -87,7 +92,7 @@ func (b *SResponse) List() (list List, err error) {
 	return
 }
 
-// 以 Json 对象序列化 SResponse 中的内容并关闭
+// 以 Json 对象反序列化 SResponse 中的内容并关闭
 func (b *SResponse) Json(objPointer interface{}) (err error) {
 	content, err := b.Bytes()
 	if err != nil {
@@ -109,4 +114,50 @@ func (b *SResponse) File(f io.Writer) (n int64, err error) {
 		err = b.Resp.Body.Close()
 	}()
 	return io.Copy(f, b.Resp.Body)
+}
+
+// 根据 ContentType 自动反序列化 SResponse 中的内容并关闭
+func (b *SResponse) AutoObject(objPointer interface{}) (err error) {
+	contentType := b.Resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = b.Resp.Header.Get("content-type")
+	}
+	content, err := b.Bytes()
+	if strings.Contains(contentType, "application/xml") {
+		if err = xml.Unmarshal(content, objPointer); err != nil {
+			return err
+		}
+		return nil
+	} else if strings.Contains(contentType, "application/json") {
+		if err = json.Unmarshal(content, objPointer); err != nil {
+			return err
+		}
+		return nil
+	} else if strings.Contains(contentType, "multipart/form-data") {
+		res, ok := objPointer.(*[]string)
+		if !ok {
+			return errors.New("decode form-data err")
+		}
+		flag := "boundary="
+		index := strings.Index(contentType, flag)
+		if index < 0 {
+			return errors.New("decode form-data err")
+		}
+		index += len(flag)
+		boundary := contentType[index:]
+		form := multipart.NewReader(bytes.NewReader(content), boundary)
+		for {
+			part, err := form.NextPart()
+			if err != nil {
+				break
+			}
+			bs, err := ioutil.ReadAll(part)
+			if err != nil {
+				continue
+			}
+			*res = append(*res, string(bs))
+		}
+		return nil
+	}
+	return errors.New("undefined response type")
 }

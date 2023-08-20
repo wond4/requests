@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
-	"sync"
 )
 
 // NewClient 使用的选项可使用 | 来设置多个
@@ -16,13 +15,9 @@ const (
 )
 
 type SClient struct {
-	C     *http.Client
-	cOnce sync.Once
-
-	middlewareReq  *reqMiddleware
-	mReqOnce       sync.Once
-	middlewareResp *respMiddleware
-	mRespOnce      sync.Once
+	C       *http.Client
+	reqMid  *reqMid
+	respMid *respMid
 }
 
 func Session(option uint) *SClient {
@@ -47,71 +42,24 @@ func (c *SClient) Request(method, remoteUrl string, args ...interface{}) (resp *
 	if err != nil {
 		return
 	}
-	if c.C == nil {
-		c.cOnce.Do(func() {
-			c.C = &http.Client{}
-		})
-	}
-	return c.Do(req)
-}
-
-func (c *SClient) Do(req *SRequest) (resp *SResponse, err error) {
-	if c.middlewareReq != nil {
-		for _, f := range c.middlewareReq.middleware {
-			f(req)
+	if c.reqMid != nil {
+		err = c.reqMid.run(req)
+		if err != nil {
+			return
 		}
+	}
+	if c.C == nil {
+		c.C = &http.Client{}
 	}
 	rawResp, err := c.C.Do(req.Req)
 	if err != nil {
 		return
 	}
 	resp = &SResponse{Resp: rawResp}
-	if c.middlewareResp != nil {
-		for _, f := range c.middlewareResp.middleware {
-			f(resp)
-		}
+	if c.respMid != nil {
+		err = c.respMid.run(resp)
 	}
 	return
-}
-
-func (c *SClient) AddReqMiddleware(f func(req *SRequest)) (id int) {
-	if c.middlewareReq == nil {
-		c.mReqOnce.Do(func() {
-			c.middlewareReq = new(reqMiddleware)
-		})
-	}
-	return c.middlewareReq.Add(f)
-}
-
-func (c *SClient) RemoveReqMiddleware(id int) {
-	if c.middlewareReq != nil {
-		c.middlewareReq.Remove(id)
-	}
-}
-func (c *SClient) ClearReqMiddleware() {
-	if c.middlewareReq != nil {
-		c.middlewareReq.Clear()
-	}
-}
-
-func (c *SClient) AddRespMiddleware(f func(req *SResponse)) (id int) {
-	if c.middlewareResp == nil {
-		c.mRespOnce.Do(func() {
-			c.middlewareResp = new(respMiddleware)
-		})
-	}
-	return c.middlewareResp.Add(f)
-}
-
-func (c *SClient) RemoveRespMiddleware(id int) {
-	if c.middlewareResp != nil {
-		c.middlewareResp.Remove(id)
-	}
-}
-func (c *SClient) ClearRespMiddleware() {
-	if c.middlewareResp != nil {
-		c.middlewareResp.Clear()
-	}
 }
 
 func (c *SClient) Get(remoteUrl string, args ...interface{}) (resp *SResponse, err error) {
@@ -128,6 +76,34 @@ func (c *SClient) Put(remoteUrl string, args ...interface{}) (resp *SResponse, e
 
 func (c *SClient) Delete(remoteUrl string, args ...interface{}) (resp *SResponse, err error) {
 	return c.Request("delete", remoteUrl, args...)
+}
+
+func (c *SClient) AddReqCB(f ReqCB) {
+	if f == nil {
+		return
+	}
+	if c.reqMid != nil {
+		c.reqMid.add(f)
+	}
+	c.reqMid = NewReqMid(f)
+}
+
+func (c *SClient) ClearReqCB() {
+	c.reqMid = nil
+}
+
+func (c *SClient) AddRespCB(f RespCB) {
+	if f == nil {
+		return
+	}
+	if c.respMid != nil {
+		c.respMid.add(f)
+	}
+	c.respMid = NewRespMid(f)
+}
+
+func (c *SClient) ClearRespCB() {
+	c.respMid = nil
 }
 
 var DefaultClient = &SClient{}

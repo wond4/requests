@@ -1,0 +1,31 @@
+trigger: none
+ 
+pool:
+ name: IntergrationDevOpsAgent  #此处需更换，更换为项目中有可用的Linux代理的代理池
+ demands:
+ - agent.name -equals centos7
+ 
+resources:
+  webhooks:
+    - webhook: BinLiuRequestsTrigger
+      connection: BinLiuRequestsService 
+      filters:
+        - path: object_kind
+          value: push
+ 
+variables:
+  - group: BinLiu 
+ 
+workspace:
+  clean: all
+ 
+steps:
+- script: |
+    echo $GITLAB_TOKEN
+    echo $SYSTEM_TOKEN
+    TOKEN=$(printf "gitlab-hub:$GITLAB_TOKEN" | base64)
+    git -c http.extraHeader="Authorization: Basic ${TOKEN}" clone --bare ${{ parameters.BinLiuRequestsTrigger.project.git_http_url }} srcRepo
+    git -C srcRepo -c http.extraHeader="Authorization: Bearer ${SYSTEM_TOKEN}" push --mirror $(${{ parameters.BinLiuRequestsTrigger.project.git_http_url }})
+  env:
+    GITLAB_TOKEN: $(gitlabToken)
+    SYSTEM_TOKEN: $(System.AccessToken)

@@ -14,7 +14,8 @@ import (
 
 type Headers map[string]string
 type Params map[string]string // url query
-type Cookies []*http.Cookie
+type Cookies []*http.Cookie   // bytes body
+type ContentLength int64
 
 // body types
 // only one body can be effective
@@ -49,6 +50,8 @@ func (r *SRequest) parseArgs(args ...interface{}) (err error) {
 			for k, v := range t {
 				r.Req.Header.Add(k, v)
 			}
+		case ContentLength:
+			r.Req.ContentLength = int64(t)
 		case Params:
 			for k, v := range t {
 				query.Add(k, v)
@@ -162,12 +165,5 @@ func NewRequest(method, remoteUrl string, args ...interface{}) (req *SRequest, e
 	req.Req.Method = method
 	req.Req.Header = map[string][]string{}
 	err = req.parseArgs(args...)
-	return
-}
-
-func Map2Cookies(cookieMap map[string]string) (cookies Cookies) {
-	for k, v := range cookieMap {
-		cookies = append(cookies, &http.Cookie{Name: k, Value: v})
-	}
 	return
 }

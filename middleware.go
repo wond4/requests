@@ -1,69 +1,62 @@
 package requests
 
-import "sync"
+type ReqCB func(req *SRequest) error
+type RespCB func(req *SResponse) error
 
-type reqMiddleware struct {
-	index      int
-	middleware map[int]func(req *SRequest)
-	lock       sync.Mutex
+type reqMid struct {
+	curCB ReqCB
+	next  *reqMid
 }
 
-func (rm *reqMiddleware) Add(f func(req *SRequest)) (id int) {
-	if f == nil {
-		return
+func NewReqMid(f ReqCB) *reqMid {
+	return &reqMid{
+		curCB: f,
 	}
-	rm.lock.Lock()
-	defer rm.lock.Unlock()
-	if rm.middleware == nil {
-		rm.Clear()
+}
+
+func (r *reqMid) add(f ReqCB) {
+	if r.next != nil {
+		r.next.add(f)
 	}
-	rm.index++
-	rm.middleware[rm.index] = f
-	return rm.index
+	r.next = NewReqMid(f)
 }
 
-func (rm *reqMiddleware) Clear() {
-	rm.middleware = make(map[int]func(req *SRequest))
-}
-
-func (rm *reqMiddleware) Remove(id int) {
-	if rm.middleware == nil {
-		return
+func (r *reqMid) run(req *SRequest) error {
+	err := r.curCB(req)
+	if err != nil {
+		return err
 	}
-	rm.lock.Lock()
-	defer rm.lock.Unlock()
-	delete(rm.middleware, id)
-}
-
-type respMiddleware struct {
-	index      int
-	middleware map[int]func(resp *SResponse)
-	lock       sync.Mutex
-}
-
-func (rm *respMiddleware) Add(f func(resp *SResponse)) (id int) {
-	if f == nil {
-		return
+	if r.next != nil {
+		return r.next.run(req)
 	}
-	rm.lock.Lock()
-	defer rm.lock.Unlock()
-	if rm.middleware == nil {
-		rm.Clear()
-	}
-	rm.index++
-	rm.middleware[rm.index] = f
-	return rm.index
+	return nil
 }
 
-func (rm *respMiddleware) Clear() {
-	rm.middleware = make(map[int]func(resp *SResponse))
+type respMid struct {
+	curCB RespCB
+	next  *respMid
 }
 
-func (rm *respMiddleware) Remove(id int) {
-	if rm.middleware == nil {
-		return
+func NewRespMid(f RespCB) *respMid {
+	return &respMid{
+		curCB: f,
 	}
-	rm.lock.Lock()
-	defer rm.lock.Unlock()
-	delete(rm.middleware, id)
+}
+
+func (r *respMid) add(f RespCB) {
+	if r.next != nil {
+		r.next.add(f)
+	}
+	r.next = NewRespMid(f)
+}
+
+func (r *respMid) run(resp *SResponse) error {
+	err := r.curCB(resp)
+	if err != nil {
+		return err
+	}
+	if r.next != nil {
+		return r.next.run(resp)
+	}
+	return nil
 }
