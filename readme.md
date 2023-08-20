@@ -42,7 +42,7 @@ package main
 import (
 	"fmt"
 
-	"gitlab.aishu.cn/Bin.liu/requests"
+	"github.com/wond4/requests"
 )
 
 func main() {

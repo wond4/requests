@@ -18,7 +18,7 @@ type SResponse struct {
 	content []byte
 }
 
-// 丢弃 Body 中的内容并关闭
+// Discard 丢弃 Body 中的内容并关闭
 func (b *SResponse) Discard() {
 	if b.Resp.Body == nil {
 		return
@@ -33,7 +33,7 @@ func (b *SResponse) Discard() {
 	_, _ = io.Copy(ioutil.Discard, b.Resp.Body)
 }
 
-// 以 []byte 返回 SResponse 中的内容并关闭
+// Bytes 以 []byte 返回 SResponse 中的内容并关闭
 func (b *SResponse) Bytes() (bytes []byte, err error) {
 	if b.Resp.Body == nil {
 		return nil, fmt.Errorf("body is null")
@@ -52,7 +52,13 @@ func (b *SResponse) Bytes() (bytes []byte, err error) {
 	return b.content, nil
 }
 
-// 以 string 返回 SResponse 中的内容并关闭
+// MustBytes 以 []byte 返回 SResponse 中的内容并关闭，如果没有内容返回 nil
+func (b *SResponse) MustBytes() (bytes []byte) {
+	bytes, _ = b.Bytes()
+	return
+}
+
+// String 以 string 返回 SResponse 中的内容并关闭
 func (b *SResponse) String() (str string, err error) {
 	content, err := b.Bytes()
 	if err != nil {
@@ -62,7 +68,13 @@ func (b *SResponse) String() (str string, err error) {
 	return
 }
 
-// 以 Object(对象) 返回 SResponse 中的内容并关闭
+// MustString 以 string 返回 SResponse 中的内容并关闭，如果没有内容返回空字符串
+func (b *SResponse) MustString() (str string) {
+	str, _ = b.String()
+	return
+}
+
+// Object 以 Object(对象) 返回 SResponse 中的内容并关闭
 func (b *SResponse) Object() (obj interface{}, err error) {
 	content, err := b.Bytes()
 	if err != nil {
@@ -72,7 +84,7 @@ func (b *SResponse) Object() (obj interface{}, err error) {
 	return
 }
 
-// 以 Dict(字典) 返回 SResponse 中的内容并关闭
+// Dict 以 Dict(字典) 返回 SResponse 中的内容并关闭
 func (b *SResponse) Dict() (dict Dict, err error) {
 	content, err := b.Bytes()
 	if err != nil {
@@ -82,7 +94,7 @@ func (b *SResponse) Dict() (dict Dict, err error) {
 	return
 }
 
-// 以 List(列表) 返回 SResponse 中的内容并关闭
+// List 以 List(列表) 返回 SResponse 中的内容并关闭
 func (b *SResponse) List() (list List, err error) {
 	content, err := b.Bytes()
 	if err != nil {
@@ -92,7 +104,7 @@ func (b *SResponse) List() (list List, err error) {
 	return
 }
 
-// 以 Json 对象反序列化 SResponse 中的内容并关闭
+// Json 以 Json 对象反序列化 SResponse 中的内容并关闭
 func (b *SResponse) Json(objPointer interface{}) (err error) {
 	content, err := b.Bytes()
 	if err != nil {
@@ -101,7 +113,7 @@ func (b *SResponse) Json(objPointer interface{}) (err error) {
 	return json.Unmarshal(content, objPointer)
 }
 
-// 把 SResponse 存到 file 中(不缓存响应内容)
+// File 把 SResponse 存到 file 中(不缓存响应内容)
 func (b *SResponse) File(f io.Writer) (n int64, err error) {
 	if b.content != nil {
 		nn, err := f.Write(b.content)
@@ -116,7 +128,7 @@ func (b *SResponse) File(f io.Writer) (n int64, err error) {
 	return io.Copy(f, b.Resp.Body)
 }
 
-// 根据 ContentType 自动反序列化 SResponse 中的内容并关闭
+// AutoObject 根据 ContentType 自动反序列化 SResponse 中的内容并关闭
 func (b *SResponse) AutoObject(objPointer interface{}) (err error) {
 	contentType := b.Resp.Header.Get("Content-Type")
 	if contentType == "" {
